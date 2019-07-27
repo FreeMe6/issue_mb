@@ -1,0 +1,110 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
+/*elements base setting*/
+html,
+body {
+    width: 100%;
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+/*scollbar*/
+::-webkit-scrollbar {
+    width: 0.6vw;
+    height: 0.6vw;
+}
+
+::-webkit-scrollbar-track {
+    background-color: white;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #00aff0;
+}
+
+
+body {
+    height: 100%;
+    overflow: auto;
+    min-width: 800px;
+}
+
+
+.look-body {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: auto;
+}
+
+.look-body > .look-contents {
+    flex: 1;
+    display: flex;
+    padding: 0 10px;
+    position: relative;
+}
+
+.look-body > .look-contents > .float-button-group {
+    position: absolute;
+    z-index: 1002;
+    top: 5%;
+    left: 170px;
+    color: gray;
+    background-color: rgba(255, 49, 163, 0.3);
+}
+
+.look-body > .look-contents > .content-left {
+    background-color: whitesmoke;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    height: 100%;
+    flex-basis: 25%;
+}
+
+.look-body > .look-contents > .content-right {
+    flex: 1;
+}
+
+.content-left .is-active > .el-collapse-item__wrap {
+    background-color: #E4E7ED;
+}
+
+/* issue menu item */
+.content-right .menu-item {
+    /*background: #edf2fc;*/
+    border: 1px solid white;
+    cursor: pointer;
+    width: 100%;
+}
+
+.content-left .menu-item:hover, .issue-actived {
+    background: #606266;
+    color: white;
+    font-weight: bold;
+}
+
+.content-left .issue-actived {
+    background: #00aff0
+}
+
+.limit-text-length {
+    /*display: inline-block;*/
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    /*max-width: 240px;*/
+    cursor: crosshair;
+}
+
+.content-right .nav-box {
+    padding: 0 5px;
+}

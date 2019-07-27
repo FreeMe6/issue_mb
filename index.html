@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Issue</title>
+    <link rel="stylesheet" href="index.css">
+    <link rel="stylesheet" href="three/css/element-ui-2.8.2.css">
+    <!--link ref="stylesheet" href="three/css/font.css"-->
+    <!-- icon -->
+    <link rel="stylesheet" type="text/css" href="three/iconfont/iconfont.css">
+
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
+    <!-- ueditor -->
+    <link href="three/umeditor/themes/default/_css/umeditor.css" type="text/css" rel="stylesheet">
+</head>
+
+<body>
+    <div id="app" class="look-body">
+        <!--header-->
+        <div style="width: 100%;height: 0"></div>
+
+        <!--contents-->
+        <div class="look-contents">
+            <!--left-->
+            <div class="content-left">
+                <el-collapse v-model="cid" @change="handelMenuChange" accordion>
+                    <el-collapse-item class="menu-collapse-item" v-for="item in dataMenus"
+                	:name="item.id">
+			    <template slot="title">
+				    <i class="header-icon el-icon-s-management" style="color: #409eff"></i>{{item.name + ' ('+item.total+')'}}
+			    </template>
+                        <div v-for="issue in dataMenusIssues" :title="issue.title"
+                            @click="handleMenuIssueClick($event, issue.id)" :class="[
+                            'menu-item','limit-text-length']">
+                            {{ issue.title }}
+                        </div>
+                    </el-collapse-item>
+                </el-collapse>
+                <!-- 原本此处是做菜单折叠的，有点不对，先不调整了 -->
+                <!--<div class="menu-collapse-item"
+                 style="
+                 width: 100%;
+                 text-align: right;
+                 padding-right: 10px;
+                 cursor: pointer;
+                 height: 30px;
+                 line-height: 30px;
+                 background: gray;
+                 color: #40b2e1;"
+                 @click="handleCollapseHide"
+            ><< <div style="width: 5px;display: inline-block"></div></div>-->
+            </div>
+            <!--right-->
+            <div class="content-right">
+                <div class="nav-box">
+                    <div
+                        style="width: 100%;background: #eee;color: white;height: 40px;padding: 0 5px;line-height: 40px;">
+                        <span v-if="!uFlag">请登录！</span><span v-if="uFlag">{{ loginData.username }}</span>
+                        <el-button size="mini" v-if="!uFlag" @click="handleLoginClick">登录</el-button>
+                        <el-button size="mini" v-if="uFlag" @click="handleLogoutClick">注销</el-button>
+                    </div>
+                    <el-form label-width="80px" label-suffix=":">
+                        <el-row>
+                            <el-col :span="6">
+                                <el-form-item label="分类">
+                                    <el-select v-model="formEditor.classify_id" placeholder="请选择" size="small"
+                                        :disabled="!uFlag">
+                                        <el-option v-for="item in dataMenus" :key="item.id" :label="item.name"
+                                            :value="parseInt(item.id)">
+                                        </el-option>
+                                    </el-select>
+                                </el-form-item>
+                            </el-col>
+                            <el-col :span="6">
+                                <el-form-item label="标题">
+                                    <el-input v-model="formEditor.title" size="small" :disabled="!uFlag"></el-input>
+                                </el-form-item>
+                            </el-col>
+                            <el-col :span="12">
+                                <el-form-item label="操作">
+                                    <el-button size="small" @click="handleNewClick" :disabled="!uFlag">新建</el-button>
+                                    <el-button size="small" @click="handleSaveClick" :disabled="!uFlag">保存</el-button>
+                                    <el-button size="small" @click="handleResetClick" :disabled="!uFlag">重置</el-button>
+                                    <el-button size="small" @click="handleDeleteIssue" :disabled="!uFlag">删除</el-button>
+                                    <el-button size="small" @click="handleClassifyClick" :disabled="!uFlag">分类
+                                    </el-button>
+                                </el-form-item>
+                            </el-col>
+                        </el-row>
+
+                        <el-row v-if="showClassifyManage">
+                            <el-col :span="6">
+                                <el-form-item label="分类">
+                                    <el-select v-model="formClassify.id" @change="handleClassifyChange"
+                                        placeholder="请选择" size="small" :disabled="!uFlag">
+                                        <el-option v-for="item in dataMenus" :key="item.id" :label="item.name"
+                                            :value="parseInt(item.id)">
+                                        </el-option>
+                                    </el-select>
+                                </el-form-item>
+                            </el-col>
+                            <el-col :span="6">
+                                <el-form-item label="分类名称">
+                                    <el-input v-model="formClassify.name" size="small" :disabled="!uFlag"></el-input>
+                                </el-form-item>
+                            </el-col>
+                            <el-col :span="12">
+                                <el-form-item label="操作">
+                                    <el-button size="small" @click="handleClassifySaveClick" :disabled="!uFlag">保存
+                                    </el-button>
+                                    <el-button size="small" @click="handleDeleteClassify" :disabled="!uFlag">删除
+                                    </el-button>
+                                    <el-button size="small" @click="handleResetClassify" :disabled="!uFlag">重置
+                                    </el-button>
+                                </el-form-item>
+                            </el-col>
+                        </el-row>
+                    </el-form>
+                </div>
+                <!--editor-->
+                <div class="edi">
+                    <script type="text/plain" id="myEditor"></script>
+                </div>
+            </div>
+        </div>
+
+        <!-- 用户登录的弹窗 -->
+        <el-dialog title="提示" :visible.sync="dialogVisible" width="40%" :before-close="handleClose">
+            <label>用户名</label>
+            <el-input v-model="loginData.username"></el-input>
+            <label>密码</label>
+            <el-input v-model="loginData.password" show-password></el-input>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="dialogVisible = false">取 消</el-button>
+                <el-button type="primary" @click="handleLogin">确 定</el-button>
+            </span>
+        </el-dialog>
+    </div>
+</body>
+<script src="three/vue-2.6.10.js"></script>
+<script src="three/element-ui-2.7.2.js"></script>
+<script src="three/jquery-3.3.1.js"></script>
+<!-- <script src="paste.js"></script> -->
+<script src="three/md5.js" type="text/javascript" charset="utf-8"></script>
+<!-- js ueditor -->
+<script type="text/javascript" charset="utf-8" src="three/umeditor/umeditor.config.js"></script>
+<script type="text/javascript" charset="utf-8" src="three/umeditor/_examples/editor_api.js"></script>
+<script type="text/javascript" src="three/umeditor/lang/zh-cn/zh-cn.js"></script>
+
+<script src="ajax.js"></script>
+<script>
+    $.ajaxSetup({
+        cache: false,
+        dataType: 'json',
+        contentType: "application/json; charset=utf-8"
+        // beforeSend: function (xhr) {
+        //   xhr.setRequestHeader('TOKEN', APP.getToken());
+        // }
+    });
+
+    new Vue({
+        el: '#app',
+        data: function () {
+            return {
+                // 登录有效时间
+                loginEffectTime: undefined,
+                // 是否登录的标识
+                uFlag: false,
+                // 这个是分类管理部分显示和隐藏控制
+                showClassifyManage: false,
+                //上次选中的菜单项
+                cid: undefined,
+                // 用于控制左侧菜单折叠和展开的，目前未使用
+                isHide: true,
+                /** umeditor */
+                umeditor: undefined,
+                /** 控制登录弹窗显示隐藏 */
+                dialogVisible: false,
+                /** 当前在用的菜单项的数据 */
+                curr_menu_classify: {},
+                /** 加载的菜单列表 */
+                dataMenus: [],
+                /** 当前加载的分类下的issue列表数据 */
+                dataMenusIssues: [],
+                /** 用户登录参数 */
+                loginData: {
+                    username: undefined,
+                    password: undefined
+                },
+                /** 表单提交的数据 */
+                formEditor: {
+                    id: undefined,
+                    title: undefined,
+                    content: undefined,
+                    classify_id: undefined
+                },
+                /** 分类提交的数据 */
+                formClassify: {
+                    id: undefined,
+                    pid: 0, //由于我们是单层菜单，所以设置为0
+                    name: undefined,
+                    has: 'true'
+                }
+            }
+        },
+        methods: {
+            /** 将参数换行展示到textarea */
+            formatArrayByCR(param, arr) {
+                for (let v of arr) {
+                    param += v + "\n";
+                }
+            },
+            /** 对话框右上角关闭事件 */
+            handleClose(done) {
+                done(); // 弹窗的 ·X· 管理触发
+            },
+            /** 登录按钮的单击 */
+            handleLoginClick() {
+                this.dialogVisible = true;
+            },
+            /** 登出 */
+            handleLogoutClick() {
+                this.umeditor.setDisabled('fullscreen');
+                this.uFlag = false;
+                localStorage.removeItem("issue_token");
+            },
+            /** 对话框登录事件 */
+            handleLogin() {
+                this.loginData.password = hex_md5(this.loginData.password);
+                _aj_.post("/user/login.do", this.loginData, data => {
+
+                    if (data.id) {
+                        this.uFlag = true;
+                        localStorage.setItem("issue_token", this.loginData.username);
+                        // 设置登录计时器
+                        this.loginEffectTime = setTimeout(function () {
+                            this.uFlag = false;
+                            localStorage.removeItem("issue_token");
+                            this.loginEffectTime = undefined;
+                        }, 1000 * 1800);
+                        this.$notify({
+                            title: '提示',
+                            type: 'success',
+                            message: '登录成功！'
+                        });
+                        this.umeditor.setEnabled();
+                    } else {
+                        this.$notify({
+                            title: '提示',
+                            type: 'error',
+                            message: '登录失败！'
+                        });
+                        this.loginData.password = undefined
+                    }
+                });
+                this.dialogVisible = false;
+            },
+            /**
+             * 根据cid来获取issue列表数据
+             */
+            handelMenuChange(id) {
+                _aj_.get("/issue/listByCid.do", {
+                    id: id
+                }, data => {
+                    this.dataMenusIssues = data;
+                })
+            },
+            handleMenuIssueClick(e, id) {
+                // remove who is actived
+                $("div.issue-actived").removeClass("issue-actived");
+                e.target.classList.add("issue-actived");
+                _aj_.get("/issue/get.do", {
+                    id: id
+                }, data => {
+                    this.formEditor.id = data.id;
+                    this.formEditor.title = data.title;
+                    this.formEditor.classify_id = data.classify_id;
+                    this.umeditor.setContent(data.content);
+                });
+            },
+            handleCollapseHide() {
+                this.isHide = !this.isHide;
+            },
+            umEditorResize() {
+                let width = document.body.clientWidth;
+                let height = document.body.clientHeight;
+                let lw = $('.nav-box').height();
+                $(".content-left").css({
+                    "height": height + 'px'
+                });
+
+                // 减少一个固定宽度
+                width -= 300;
+                height -= lw + 40;
+
+                $(".edui-body-container").css({
+                    "width": width + 'px',
+                    "height": height + 'px'
+                });
+            },
+            validate(result, msg) {
+                if (result) {
+                    this.$notify({
+                        title: '提示',
+                        message: msg,
+                        type: 'error'
+                    });
+                }
+                return !result;
+            },
+            handleNewClick() {
+                this.formEditor.id = undefined;
+                this.formEditor.title = "TODO";
+                this.umeditor.setContent('<p></p>');
+            },
+            handleSaveClick() {
+                this.formEditor.content = this.umeditor.getContent();
+
+                // 校验
+                let flag = true;
+                flag &= this.validate(!this.formEditor.content && this.formEditor.content === '', '内容不能为空');
+                flag &= this.validate(!this.formEditor.title && this.formEditor.title === '', '标题不能为空');
+                flag &= this.validate(!this.formEditor.classify_id && this.formEditor.classify_id === '', '类别不能为空');
+
+                // 执行操作
+                if (flag) {
+                    if (this.formEditor.id) {
+                        _aj_.post("/issue/update.do", this.formEditor, rel => {
+
+
+                            this.$message({
+                                type: 'success',
+                                message: '笔记更新成功!'
+                            });
+                            // 你更新这个issue到那个菜单，自动的切换到指定的菜单，展开指定菜单项
+                            this.reloadIssueListByCid(this.formEditor.classify_id);
+                        })
+                    } else {
+                        _aj_.post("/issue/add.do", this.formEditor, rel => {
+
+                            this.$message({
+                                type: 'success',
+                                message: '笔记添加成功!'
+                            });
+
+                            // 你更新这个issue到那个菜单，自动的切换到指定的菜单，展开指定菜单项
+                            this.reloadIssueListByCid(this.formEditor.classify_id);
+                            this.resetIssueRelate();
+                        })
+                    }
+                }
+            },
+            /**
+             * 管理分类的改变
+             * @param id
+             */
+            handleClassifyChange(id) {
+                for (item of this.dataMenus) {
+                    if (item.id === id + "") {
+                        this.formClassify.name = item.name;
+                    }
+                }
+            },
+            handleClassifySaveClick() {
+                let flag = true;
+                flag = this.validate(!this.forClassify && this.formClassify.name === '', '类别名称不能为空');
+                // 执行操作
+                if (flag) {
+                    if (this.formClassify.id) {
+                        _aj_.post("/classify/update.do", this.formClassify, rel => {
+
+                            this.$message({
+                                type: 'success',
+                                message: '类别更新成功!'
+                            });
+                            // 重新加载菜单
+                            this.loadMenuDatas();
+                        })
+                    } else {
+                        _aj_.post("/classify/add.do", this.formClassify, rel => {
+
+                            this.$message({
+                                type: 'success',
+                                message: '添加类别成功!'
+                            });
+                            // 重新加载菜单
+                            this.loadMenuDatas();
+                        })
+                    }
+                }
+            },
+            /**
+             * 重新根据cid加载菜单项
+             */
+            reloadIssueListByCid(cid) {
+                // 处理cid为数值的格式，先转换成字符串格式
+                cid += '';
+                // 重新加载菜单,计算统计值
+                this.loadMenuDatas();
+                if (!cid) {
+                    this.dataMenusIssues = [];
+                    this.cid = undefined;
+                }
+
+                /* -以下是处理有cid的情况- */
+                // 关闭默认展开的菜单项 TODO (先关闭清理，看看效果)
+                //this.cid = undefined
+                // 清理上次的缓存的数据
+                //this.dataMenusIssues = [];
+
+                // 重新加载cid下面的issue列表
+                this.handelMenuChange(cid);
+                // 重新获取数据之后展开对应的菜单项
+                this.cid = cid;
+            },
+            // 清理编辑和添加的数据
+            resetIssueRelate() {
+                // 清理必要的窗口上填写的信息
+                this.handleNewClick();
+                this.formEditor.content = undefined;
+                this.formEditor.classify_id = undefined;
+
+                // 重置分类管理的菜单项
+                this.handleResetClassify();
+                // 隐藏分类管理的操作部分
+                this.showClassifyManage = false;
+            },
+            /**
+             * 完全重置操作
+             */
+            handleResetClick() {
+                // 重置和issue相关的页面的编辑信息
+                this.resetIssueRelate();
+
+                // 重新加载菜单数据
+                this.reloadIssueListByCid();
+            },
+            handleResetClassify() {
+                this.formClassify.id = undefined;
+                this.formClassify.name = undefined;
+            },
+            // 加载菜单及issue的统计数据
+            loadMenuDatas() {
+                _aj_.get('/issue/count.do', null, data => {
+                    this.dataMenus = data;
+                });
+            },
+            handleClassifyClick() {
+                this.showClassifyManage = !this.showClassifyManage;
+            },
+            handleDeleteIssue() {
+                this.$confirm('此操作将永久删除该文件, 是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    _aj_.post("/issue/delete.do", {
+                        id: this.formEditor.id
+                    }, () => {
+                        this.$message({
+                            type: 'success',
+                            message: '删除成功!'
+                        });
+                        // 重置issue编辑信息
+                        this.resetIssueRelate();
+                        // 重新加载此菜单数据展示
+                        this.reloadIssueListByCid(this.cid);
+                    });
+                }).catch(() => {});
+            },
+            handleDeleteClassify() {
+                this.$confirm('此操作将永久删除该文件, 是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    _aj_.post("/classify/delete.do", {
+                        id: this.formClassify.id
+                    }, () => {
+                        this.$message({
+                            type: 'success',
+                            message: '删除成功!'
+                        });
+                        //执行完全的重置操作
+                        this.handleResetClick();
+                    });
+                }).catch(() => {});
+            }
+        },
+        created() {
+            let userName = localStorage.getItem("issue_token");
+            if (userName) {
+                this.uFlag = true;
+                this.loginData.username = userName;
+            }
+            this.loadMenuDatas();
+            // 清理可能出现的缓存
+            localStorage.removeItem("issue_token");
+        },
+        mounted() {
+            let S = this;
+            window.addEventListener('resize', () => {
+                setTimeout(S.umEditorResize(), 300);
+            }, false);
+
+            // 加载完毕之后加载富文本编辑器
+            const initUmEditor = id => {
+                // 此处必须使用绝对定位的方式访问，在nginx的8080上做图片的代理转发，不然的话，图片总会有问题的
+                const URL = '/';
+                let option = {
+                    fontfamily: [{
+                            name: '宋体',
+                            val: '宋体'
+                        },
+                        {
+                            name: '微软雅黑',
+                            val: '微软雅黑'
+                        },
+                        {
+                            name: '黑体',
+                            val: '黑体'
+                        },
+                        {
+                            name: '幼圆',
+                            val: '幼圆'
+                        }
+                    ],
+                    fontsize: [12, 16, 18, 24, 32, 48], //经过测试，这些数据是足够使用的
+                    toolbar: [
+                        'source bold italic underline strikethrough | forecolor backcolor |',
+                        ' selectall | fontfamily fontsize',
+                        '| emotion image',
+                        '| horizontal print preview fullscreen'
+                    ],
+                    filterRules: function () {
+                            return {
+                                span: function (node) {
+                                    if (/Wingdings|Symbol/.test(node.getStyle('font-family'))) {
+                                        return true;
+                                    } else {
+                                        node.parentNode.removeChild(node, true)
+                                    }
+                                },
+                                p: function (node) {
+                                    var listTag;
+                                    if (node.getAttr('class') == 'MsoListParagraph') {
+                                        listTag = 'MsoListParagraph'
+                                    }
+                                    node.setAttr();
+                                    if (listTag) {
+                                        node.setAttr('class', 'MsoListParagraph')
+                                    }
+                                    if (!node.firstChild()) {
+                                        node.innerHTML(UM.browser.ie ? '&nbsp;' : '<br>')
+                                    }
+                                },
+                                div: function (node) {
+                                    var tmpNode, p = UM.uNode.createElement('p');
+                                    while (tmpNode = node.firstChild()) {
+                                        if (tmpNode.type == 'text' || !UM.dom.dtd.$block[tmpNode
+                                                .tagName]) {
+                                            p.appendChild(tmpNode);
+                                        } else {
+                                            if (p.firstChild()) {
+                                                node.parentNode.insertBefore(p, node);
+                                                p = UM.uNode.createElement('p');
+                                            } else {
+                                                node.parentNode.insertBefore(tmpNode, node);
+                                            }
+                                        }
+                                    }
+                                    if (p.firstChild()) {
+                                        node.parentNode.insertBefore(p, node);
+                                    }
+                                    node.parentNode.removeChild(node);
+                                },
+                                //$:{}表示不保留任何属性
+                                br: {
+                                    $: {}
+                                },
+                                ol: {
+                                    $: {}
+                                },
+                                ul: {
+                                    $: {}
+                                },
+
+                                dl: function (node) {
+                                    node.tagName = 'ul';
+                                    node.setAttr()
+                                },
+                                dt: function (node) {
+                                    node.tagName = 'li';
+                                    node.setAttr()
+                                },
+                                dd: function (node) {
+                                    node.tagName = 'li';
+                                    node.setAttr()
+                                },
+                                li: function (node) {
+
+                                    var className = node.getAttr('class');
+                                    if (!className || !/list\-/.test(className)) {
+                                        node.setAttr()
+                                    }
+                                    var tmpNodes = node.getNodesByTagName('ol ul');
+                                    UM.utils.each(tmpNodes, function (n) {
+                                        node.parentNode.insertAfter(n, node);
+
+                                    })
+
+                                },
+                                table: function (node) {
+                                    UM.utils.each(node.getNodesByTagName('table'), function (t) {
+                                        UM.utils.each(t.getNodesByTagName('tr'), function (
+                                            tr) {
+                                            var p = UM.uNode.createElement('p'),
+                                                child, html = [];
+                                            while (child = tr.firstChild()) {
+                                                html.push(child.innerHTML());
+                                                tr.removeChild(child);
+                                            }
+                                            p.innerHTML(html.join('&nbsp;&nbsp;'));
+                                            t.parentNode.insertBefore(p, t);
+                                        });
+                                        t.parentNode.removeChild(t)
+                                    });
+                                    var val = node.getAttr('width');
+                                    node.setAttr();
+                                    if (val) {
+                                        node.setAttr('width', val);
+                                    }
+                                },
+                                tbody: {
+                                    $: {}
+                                },
+                                caption: {
+                                    $: {}
+                                },
+                                th: {
+                                    $: {}
+                                },
+                                td: {
+                                    $: {
+                                        valign: 1,
+                                        align: 1,
+                                        rowspan: 1,
+                                        colspan: 1,
+                                        width: 1,
+                                        height: 1
+                                    }
+                                },
+                                tr: {
+                                    $: {}
+                                },
+                                h3: {
+                                    $: {}
+                                },
+                                h2: {
+                                    $: {}
+                                },
+                                //黑名单，以下标签及其子节点都会被过滤掉
+                                '-': 'script style meta iframe embed object'
+                            }
+                        }()
+                        //图片上传配置区，返回值需要传回一个图片的链接地址，ume需要的格式json: {“url”: "xxxx"}
+                        ,
+                    imageUrl: URL + "upload.do"//"file/imageUp" //图片上传提交地址
+                        ,
+                    imagePath: URL + "issue_pic/" //图片修正地址，引用了fixedImagePath,如有特殊需求，可自行配置
+                        ,
+                        // PHP 的 $_FILES["file"]中的file这就定义
+                    imageFieldName: "file"//"upfile" //图片数据的key,若此处修改，需要在后台对应文件修改对应参数
+                };
+                UM.MyOption = option; //为了实现扩展封装，我们将配置参数放到此处
+                return UM.getEditor(id, option);
+            };
+
+            //编辑器必须在你绑定之前初始化，他会将script标签代替掉，生成div
+            this.umeditor = initUmEditor('myEditor');
+            this.umeditor.setWidth("100%");
+            this.umeditor.setHeight("100%");
+            if (!this.uFlag) {
+                this.umeditor.setDisabled('fullscreen');
+            }
+
+            //设置宽度自适应
+            $(".edui-body-container").css({
+                "width": "98%",
+                "height": "98%"
+            });
+            S.umEditorResize();
+        }
+    })
+</script>
+
+</html>
