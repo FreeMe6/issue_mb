@@ -33,3 +33,28 @@ issue umeditor old version
 另外，issue_pic目录必须创建，用于存储剪切板上传的图片。
 
 如果你喜欢尝试，可以试试；
+
+# 数据库
+
+添加默认用户数据，账号密码就是 root/root
+```json
+{"id": 282784, "phone": "13100651990", "password": "63a9f0ea7bb98050796b649e85481845", "username": "root"}
+```
+
+表有三张：
+```sql
+
+CREATE TABLE "public"."tb_issue" (
+"j" jsonb
+)
+
+CREATE TABLE "public"."tb_classify" (
+"j" jsonb
+)
+
+CREATE TABLE "public"."tb_user" (
+"j" jsonb
+)
+```
+
+数据存储采用jsonb格式，不懂得百度jsonb即可。
